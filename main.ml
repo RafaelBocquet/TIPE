@@ -17,8 +17,11 @@ b#dump;
 (b#add a)#dump;
 *)
 
-let rna_hash q = [Queue.top q];; 
-let rna_config = [256; 2048; 256], rna_hash;;
+let rna_hash q = if Queue.is_empty q then [0] else [0; 1 + Queue.top q];; 
+let rna_config : Rna.rna_config = {
+    Rna.layer_config = [256; 512; 256];
+    Rna.hash_function = rna_hash
+};;
 let rna = new Rna.rna rna_config;;
 
 (* Commands *)
@@ -37,12 +40,13 @@ let archive (filename : string) =
   let file = open_in filename in
     let cont = ref true in
     let by_queue = Queue.create () in
+    rna#init;
     while !cont do
       try
         let by = input_byte file in
         (* Get RNA prediction + train *)
 
-        let _ = rna#predict by_queue in ();
+        let prediction = rna#predict by_queue in () ;
         rna#train by_queue by;
 
         (* Add byte to queue *)
@@ -56,6 +60,7 @@ let archive (filename : string) =
 let archive_multiple (filenames : string list)  = 
   print_string "archiving :\n";
   List.iter (fun f -> print_string f; print_newline()) filenames;
+  List.iter archive filenames;
   ;;
 
 let main () =
