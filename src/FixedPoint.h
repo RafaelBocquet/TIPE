@@ -55,6 +55,15 @@ public:
   }
 
   SelfType operator/(SelfType const& other) const{
+    if(other.mValue == 0){
+      if(mValue > 0){
+        return SelfType::FromValue(maximum);
+      }else if(mValue == 0){
+        return SelfType::FromValue(0);
+      }else{
+        return SelfType::FromValue(-(maximum - 1));
+      }
+    }
     SelfType tmp;
     std::int64_t a = mValue, b = other.mValue;
     tmp.mValue = static_cast<std::int32_t>((a << FB) / b);
@@ -76,6 +85,13 @@ public:
 private:
   std::int32_t mValue;
 };
+
+template<unsigned IB, unsigned FB>
+constexpr std::int32_t FixedPoint<IB, FB>::unit;
+template<unsigned IB, unsigned FB>
+constexpr std::int32_t FixedPoint<IB, FB>::zero;
+template<unsigned IB, unsigned FB>
+constexpr std::int32_t FixedPoint<IB, FB>::maximum;
 
 #include "FixedPointExp.inl"
 
