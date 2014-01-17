@@ -40,10 +40,11 @@ void archive(std::string const& filename){
     auto activation_derivative = [&](double x) -> double { return activation_function(x) * (1 - activation_function(x)); };
     MLP mlp({(1 << 17) - 1 + 8, 2}, ActivationFunction {activation_function, activation_derivative, 0.0, 1.0});
   } */
-  ConstModel a0(0), a1((1 << 32) - 1), mid;
-  BitPPMModel<24> ppm(10000);
+  ConstModel a0(0), a1((1ull << 32) - 1), mid;
+  BitPPMModel<64> ppm(12800);
+  BytePPMModel<3> ppm2(40000);
   MixModel model({
-    &mid, &ppm
+    &a0, &mid, &a1
   });
   unsigned done = 0;
   while(file.good()){
@@ -53,7 +54,7 @@ void archive(std::string const& filename){
     for(unsigned i = 0; i < 8; ++i){
       bool bit = ch & (1 << (7-i));
       std::uint32_t pred = model.predict();
-      // std::cout << "prediction : " << pred << std::endl;
+      // std::cout << "prediction : " << (double) pred / (double) (1ull << 32) << " " << bit << std::endl;
       encoder.encode(bit, pred);
       model.update(bit);
     }

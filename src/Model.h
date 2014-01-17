@@ -57,12 +57,10 @@ public:
   void renormalize(){
     FixedPoint24 sum;
     for(FixedPoint24& w : mWeights){
-      // std::cout << w.value() << " ";
       if(w < FixedPoint24(0)){ w = FixedPoint24(0); }
       if(w > FixedPoint24(1)){ w = FixedPoint24(1); }
       sum += w;
     }
-    // std::cout << std::endl;
     for(FixedPoint24& w : mWeights){
       w /= sum;
     }
@@ -85,7 +83,7 @@ public:
     for(unsigned i = 0; i < mModels.size(); ++i){
       FixedPoint24 err = (nxt ? FixedPoint24::FromValue(mModelPredictions[i] >> 8) : FixedPoint24(1) - FixedPoint24::FromValue(mModelPredictions[i] >> 8));
       
-      mWeights[i] += mRate * err * mWeights[i];
+      mWeights[i] += mRate * err * err * mWeights[i];
     }
     renormalize();
   }
@@ -128,8 +126,8 @@ class BitPPMModel : public Model {
         return mCount;
       } else {
         std::array<std::uint64_t, 2> count = child(ctx[mDepth]).contextCount(ctx);
-        count[0] = 2 * count[0] + mCount[0];
-        count[1] = 2 * count[1] + mCount[1];
+        count[0] = 0.8 * count[0] + mCount[0];
+        count[1] = 0.8 * count[1] + mCount[1];
         return count;
       }
     }
@@ -180,23 +178,23 @@ public:
       }
       std::array<std::uint64_t, 2> const& cCount = mContextCount.contextCount(curContext);
       if(cCount[0] == 0 && cCount[1] == 0){
-        std::cout << "No context !" << std::endl;
+        // std::cout << "No context !" << std::endl;
         return 1 << 31;
       }else{
-        std::uint64_t c1 = static_cast<std::uint64_t>(cCount[0]) << 32;
+        std::uint64_t c1 = static_cast<std::uint64_t>(cCount[1]) << 32;
         std::uint64_t c0 = cCount[0] + cCount[1];
         std::uint64_t dv = c1 / c0;
         // ---
-        std::cout << "Context : ";
+        // std::cout << "Context : ";
         for(unsigned i = 0; i < O; ++i){
-          std::cout << curContext[O-1-i];
-        }std::cout << std::endl;
-        std::cout << cCount[0] << " " << cCount[1] << " " << static_cast<std::uint32_t>(dv) << "\n";
+          // std::cout << curContext[O-1-i];
+        }// std::cout << std::endl;
+        // std::cout << cCount[0] << " " << cCount[1] << " " << static_cast<std::uint32_t>(dv) << "\n";
         // ---
         return static_cast<std::uint32_t>(dv);
       }
     }else{
-      std::cout << "No context !" << std::endl;
+      // std::cout << "No context !" << std::endl;
       return 1 << 31;
     }
   }
@@ -258,7 +256,7 @@ class BytePPMModel : public Model {
       } else {
         std::array<std::uint64_t, 256> count = child(ctx[mDepth]).contextCount(ctx);
         for(unsigned i = 0; i < 256; ++i){
-          count[i] = 2 * count[i] + mCount[i];
+          count[i] = 3 * count[i] / 2 + mCount[i];
         }
         return count;
       }
@@ -324,24 +322,24 @@ public:
       }
 
       // ---
-      std::cout << "Context : ";
+      // std::cout << "Context : ";
       for(unsigned i = 0; i < O; ++i){
-        std::cout << curContext[O-1-i] << " ";
-      }std::cout << std::endl;
+        // std::cout << std::hex << (int) curContext[O-1-i] << " ";
+      } // std::cout << std::endl;
       // ---
 
       if(c0 + c1 == 0){
-        std::cout << "No context !" << std::endl;
+        // std::cout << "No context !" << std::endl;
         return 1 << 31;
       }else{
-        std::uint64_t dv = (c0 << 32) / (c1 + c0);
+        std::uint64_t dv = (c1 << 32) / (c1 + c0);
         // ---
-        std::cout << c0 << " " << c1 << " " << dv << "\n";
+        // std::cout << c0 << " " << c1 << " " << dv << "\n";
         // ---
-        return static_cast<std::uint32_t>(dv);
+        return (c0 == 0 ? (1ull << 32) - 1 : static_cast<std::uint32_t>(dv));
       }
     }else{
-      std::cout << "No context !" << std::endl;
+      // std::cout << "No context !" << std::endl;
       return 1 << 31;
     }
   }
@@ -358,7 +356,7 @@ public:
         }
         mContextCount.contextDecrement(oldContext, mBuffer[O]);
       }
-      std::cout << "Push " << mCurChar << std::endl;
+      // std::cout << "Push " << mCurChar << std::endl;
       mBuffer.push_back(mCurChar);
       if(mBuffer.size() >= O + 1){
         ContextType newContext;
