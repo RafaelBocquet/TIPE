@@ -30,9 +30,6 @@ public:
   }
 
   void encode(bool bit, std::uint32_t pred){
-    // std::cout << std::hex << std::setw(16) << mLow << " " << std::setw(16) << mHigh << std::endl;
-    // assert(pred != 0); // 0 probability is impossible=
-    // std::cout << mLow  << " " << mHigh << " " << pred << std::endl;
     assert(mLow <= mHigh);
     /*
       compute mid
@@ -49,11 +46,11 @@ public:
     /* 1 case :
       mid = mHigh
       */
-  std::uint64_t range = mHigh - mLow;
+    std::uint64_t range = mHigh - mLow;
     std::uint64_t mid = mLow +
       ((pred * (range & 0x00000000FFFFFFFF)) >> 32) + 
       pred * ((range & 0xFFFFFFFF00000000) >> 32);
-    std::cout << std::hex << mLow  << " " << mid << " " << mHigh << " " << pred << std::endl;
+    // std::cout << std::hex << mLow  << " " << mid << " " << mHigh << " " << pred << std::endl;
     assert(mLow <= mid && mid < mHigh);
     if(not bit){
       mLow = mid + 1;

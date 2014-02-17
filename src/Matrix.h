@@ -3,10 +3,13 @@
 #include <cassert>
 #include <vector>
 #include <functional>
+#include <iostream>
 
 template<typename T>
 class Matrix{
 public:
+  Matrix(){ }
+
   Matrix(unsigned w, unsigned h) :
     mWidth(w),
     mHeight(h), 
@@ -31,13 +34,19 @@ public:
     }
   }
 
+  void resize(unsigned w, unsigned h){
+    mWidth = w;
+    mHeight = h;
+    mData.resize(w * h);
+  }
+
   unsigned width() const { return mWidth; }
   unsigned height() const { return mHeight; }
 
   // Index access
 
-  T const& at(unsigned i, unsigned j) const { return mData[i * mWidth + j]; }
-  T& at(unsigned i, unsigned j) { return mData[i * mWidth + j]; }
+  T const& at(unsigned i, unsigned j) const { assert(i < mHeight && j < mWidth); return mData[i * mWidth + j]; }
+  T& at(unsigned i, unsigned j) { assert(i < mHeight && j < mWidth); return mData[i * mWidth + j]; }
 
   // Arithmetic operators
 

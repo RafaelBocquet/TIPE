@@ -21,10 +21,15 @@ public:
   double asDouble() const{
     return ((double) mValue) / ((double) unit);
   }
-
-  static FixedPoint FromValue(std::int32_t value){
-    FixedPoint r; r.mValue = value; return r;
+  
+  static constexpr SelfType FromValue(std::int32_t value){
+    SelfType r = SelfType(); r.mValue = value; return r;
   }
+
+  static constexpr SelfType Unit(){
+    return FromValue(unit);
+  }
+
 
   std::int32_t value() const {
     return mValue;
@@ -42,6 +47,10 @@ public:
   }
   SelfType operator-(SelfType const& other) const{
     SelfType tmp = *this; tmp -= other; return tmp;
+  }
+
+  SelfType operator-() const{
+    SelfType tmp = *this; tmp.mValue *= -1; return tmp;
   }
 
   SelfType operator*(SelfType const& other) const{
@@ -96,3 +105,4 @@ constexpr std::int32_t FixedPoint<IB, FB>::maximum;
 #include "FixedPointExp.inl"
 
 using FixedPoint24 = FixedPoint<8, 24>;
+using FixedPoint20 = FixedPoint<12, 20>;

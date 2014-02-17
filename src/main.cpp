@@ -34,17 +34,15 @@ void archive(std::string const& filename){
   // --- Algo ---
   unsigned char ch;
 
-  // Rna rna({(1 << 17) - 1 + 8, 8, 2});
-  /* {
-    auto activation_function = [](double x) -> double { return 1.0 / (1.0 + exp(-x)); };
-    auto activation_derivative = [&](double x) -> double { return activation_function(x) * (1 - activation_function(x)); };
-    MLP mlp({(1 << 17) - 1 + 8, 2}, ActivationFunction {activation_function, activation_derivative, 0.0, 1.0});
-  } */
   ConstModel a0(0), a1((1ull << 32) - 1), mid;
   BitPPMModel<64> ppm(12800);
   BytePPMModel<3> ppm2(40000);
+  BitRNAModel<10, 16> rna;
   MixModel model({
-    &a0, &mid, &a1
+    &a0, &a1, &mid,
+    // &ppm,
+    &ppm2
+    // &rna
   });
   unsigned done = 0;
   while(file.good()){
@@ -53,10 +51,10 @@ void archive(std::string const& filename){
 
     for(unsigned i = 0; i < 8; ++i){
       bool bit = ch & (1 << (7-i));
-      std::uint32_t pred = model.predict();
-      // std::cout << "prediction : " << (double) pred / (double) (1ull << 32) << " " << bit << std::endl;
+      std::uint32_t pred = rna.predict();
+      // std::cout << "prediction : " << pred << " " << std::setprecision(10) << (double) pred / (double) (1ull << 32) << " " << bit << std::endl;
       encoder.encode(bit, pred);
-      model.update(bit);
+      rna.update(bit);
     }
     done++;
   }
