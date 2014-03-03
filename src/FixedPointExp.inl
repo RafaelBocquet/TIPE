@@ -73,7 +73,7 @@ FixedPoint<IB, FB> FixedPoint<IB, FB>::exp() const{
   std::int32_t x = mValue;
   bool neg = x < 0; if(neg){ x = -x; }
   if(x >= exp_table_1[IB].mValue){
-    return SelfType(maximum);
+    return neg ? SelfType() : SelfType::FromValue(maximum);
   }
   SelfType result;
   unsigned lo = 0, hi = IB;
@@ -93,5 +93,5 @@ FixedPoint<IB, FB> FixedPoint<IB, FB>::exp() const{
       result.mValue += result.mValue >> (i + 1);
     }
   }
-  return neg ? SelfType(1.0) / result : result;
+  return neg ? (SelfType(1.0) / result) : result;
 }

@@ -387,7 +387,7 @@ template<unsigned CtxSize, unsigned ...LS>
 class BitRNAModel : public Model {
   static constexpr unsigned LayerCount = 1 + sizeof...(LS);
   static constexpr unsigned InContextSize = (1 << (CtxSize+1)) - 1;
-  static constexpr unsigned LayerSizes [] = { InContextSize, LS..., 2 };
+  static constexpr unsigned LayerSizes [] = { InContextSize, LS..., 1 };
 public:
   BitRNAModel() : 
   mBuffer(CtxSize),
@@ -402,16 +402,17 @@ public:
       delta[i].resize(LayerSizes[i+1]);
     }
 
-    std::uniform_int_distribution<std::int32_t> distribution(FixedPoint20(-0.2).value(), FixedPoint20(0.2).value());
-    for(unsigned i = 0; i < LayerCount; ++i){
+    std::uniform_real_distribution<double> distribution(-0.6, 0.6);
+    for(unsigned i = 0; i < LayerCount; ++i) {
       layers[i].resize(LayerSizes[i], LayerSizes[i + 1]);
       layers[i].init([&](unsigned, unsigned) -> FixedPoint20 {
-        return FixedPoint20::FromValue(distribution(random_generator));
+        return FixedPoint20(distribution(random_generator));
       });
     }
   }
 
   FixedPoint20 activation_function(FixedPoint20 const& x){
+    // std::cout << x.asDouble() << " " << (-x).asDouble() << " " << (-x).exp().asDouble() << " " << (FixedPoint20::Unit() / (FixedPoint20::Unit() + (-x).exp())).asDouble() << std::endl;
     return FixedPoint20::Unit() / (FixedPoint20::Unit() + (-x).exp());
   }
   FixedPoint20 activation_derivative(FixedPoint20 const& x){
@@ -429,6 +430,7 @@ public:
     }
     // --- Calculate output vector
     cacheResult[0] = in_vec;
+    cacheDerivative[0] = in_vec;
     for(unsigned i = 0; i < LayerCount; ++i){
       auto tmp = layers[i] * cacheResult[i];
       cacheResult[i+1].init([&](unsigned i, unsigned j) -> FixedPoint20 {
@@ -439,19 +441,19 @@ public:
       });
     }
     // --- Get prediction
-    FixedPoint20 fp_prediction = cacheResult[LayerCount].at(1, 0) / (cacheResult[LayerCount].at(0, 0) + cacheResult[LayerCount].at(1, 0));
+    FixedPoint20 fp_prediction = cacheResult[LayerCount].at(0, 0);
     std::uint32_t prediction = fp_prediction.value() << 12;
     // std::cout << cacheResult[LayerCount].at(1, 0).asDouble() << " " << cacheResult[LayerCount].at(0, 0).asDouble() << std::endl;
     return prediction;
   }
 
-  virtual void update(bool b) override {
-    FixedPoint20 training_rate = FixedPoint20(0.05);
+  void train(bool b) {
+    FixedPoint20 training_rate = FixedPoint20(0.2);
     // --- Create except vector ---
-    Matrix<FixedPoint20> except(1, 2, [&](unsigned, unsigned j) -> FixedPoint20 { return (b == j) ? FixedPoint20::Unit() : FixedPoint20(); });
+    Matrix<FixedPoint20> except(1, 1, [&](unsigned, unsigned) -> FixedPoint20 { return b ? FixedPoint20::Unit() : FixedPoint20(); });
     // --- First delta ---
-    for(int i = 0; i < 2; ++i){
-      delta[LayerCount - 1][i] = (cacheDerivative[LayerCount].at(i, 0) - except.at(i, 0)) * cacheResult[LayerCount].at(i, 0);
+    for(int i = 0; i < 1; ++i){
+      delta[LayerCount - 1][i] = (cacheResult[LayerCount].at(i, 0) - except.at(i, 0)) * cacheDerivative[LayerCount].at(i, 0);
     }
     // --- Backpropagation deltas ---
     for(int l = LayerCount - 2; l >= 0; --l){
@@ -464,6 +466,8 @@ public:
       }
     }
     // --- Apply computation ---
+    // std::cout << "Excepted " << b << ", got " << cacheResult[LayerCount].at(0, 0).asDouble() << std::endl;
+
     for(int l = 0; l < LayerCount; ++l){
       for(int i = 0; i < layers[l].height(); ++i){
         for(int j = 0; j < layers[l].width(); ++j){
@@ -471,6 +475,11 @@ public:
         }
       }
     }
+  }
+
+  virtual void update(bool b) override {
+    // --- Train network / update weighs
+    train(b);
     // --- Manage context
     mBuffer.push_back(b);
   }

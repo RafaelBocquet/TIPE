@@ -37,16 +37,15 @@ void archive(std::string const& filename){
   ConstModel a0(0), a1((1ull << 32) - 1), mid;
   BitPPMModel<64> ppm(12800);
   BytePPMModel<3> ppm2(40000);
-  BitRNAModel<10, 16> rna;
+  BitRNAModel<14> rna;
   MixModel model({
     &a0, &a1, &mid,
-    // &ppm,
-    &ppm2
-    // &rna
+    &ppm, &ppm2,
+    &rna
   });
   unsigned done = 0;
   while(file.good()){
-    if(done % 1000 == 0) std::cout << done << std::endl;
+    if(done % 100 == 0) std::cout << done << std::endl;
     file >> ch;
 
     for(unsigned i = 0; i < 8; ++i){
@@ -96,8 +95,8 @@ enum class ProgramOption {
 };
 
 int main(int argc, char** argv){
-  FixedPoint24 a(1.0);
-  FixedPoint24 e = a.exp();
+  FixedPoint20 a(344.4795246);
+  FixedPoint20 e = a.exp();
   std::cout << std::setprecision(25) <<  e.asDouble() << std::endl;
 
   std::vector<std::string> args(argc - 1);
