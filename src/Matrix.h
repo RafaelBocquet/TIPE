@@ -26,6 +26,14 @@ public:
       }
     }
 
+  void reset(){
+    for(unsigned i = 0; i < mHeight; ++i){
+      for(unsigned j = 0; j < mWidth; ++j){
+        mData[i * mWidth + j] = T();
+      }
+    }
+  }
+
   void init(std::function<T(unsigned, unsigned)> const& init){
     for(unsigned i = 0; i < mHeight; ++i){
       for(unsigned j = 0; j < mWidth; ++j){

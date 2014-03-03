@@ -53,8 +53,8 @@ public:
     SelfType tmp = *this; tmp.mValue *= -1; return tmp;
   }
 
-  SelfType operator*(SelfType const& other) const{
-    SelfType tmp;
+  constexpr SelfType operator*(SelfType const& other) const{
+    SelfType tmp = SelfType();
     std::int64_t a = mValue, b = other.mValue;
     tmp.mValue = static_cast<std::int32_t>((a * b) >> FB);
     return tmp;
@@ -63,7 +63,7 @@ public:
     *this = *this * other;
   }
 
-  SelfType operator/(SelfType const& other) const{
+  constexpr SelfType operator/(SelfType const& other) const{
     if(other.mValue == 0){
       if(mValue > 0){
         return SelfType::FromValue(maximum);
@@ -73,7 +73,7 @@ public:
         return SelfType::FromValue(-(maximum - 1));
       }
     }
-    SelfType tmp;
+    SelfType tmp = SelfType();
     std::int64_t a = mValue, b = other.mValue;
     tmp.mValue = static_cast<std::int32_t>((a << FB) / b);
     return tmp;
@@ -90,6 +90,7 @@ public:
   bool operator>=(SelfType const& other) const { return mValue >= other.mValue; }
 
   SelfType exp() const;
+  SelfType subOneLn() const;
 
 private:
   std::int32_t mValue;
@@ -103,6 +104,7 @@ template<unsigned IB, unsigned FB>
 constexpr std::int32_t FixedPoint<IB, FB>::maximum;
 
 #include "FixedPointExp.inl"
+#include "FixedPointSubOneLn.inl"
 
 using FixedPoint24 = FixedPoint<8, 24>;
 using FixedPoint20 = FixedPoint<12, 20>;

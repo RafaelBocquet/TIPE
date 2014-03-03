@@ -3,6 +3,10 @@
 #include "Matrix.h"
 #include "FixedPoint.h"
 #include "Model.h"
+#include "RNAModel.h"
+#include "BytePPMModel.h"
+#include "BitPPMModel.h"
+#include "MixModel.h"
 
 #include <iostream>
 #include <fstream>
@@ -34,26 +38,25 @@ void archive(std::string const& filename){
   // --- Algo ---
   unsigned char ch;
 
-  ConstModel a0(0), a1((1ull << 32) - 1), mid;
+  ConstModel mid;
   BitPPMModel<64> ppm(12800);
   BytePPMModel<3> ppm2(40000);
-  BitRNAModel<14> rna;
+  BitRNAModel<16> rna;
   MixModel model({
-    &a0, &a1, &mid,
-    &ppm, &ppm2,
+    &mid,
     &rna
   });
   unsigned done = 0;
   while(file.good()){
-    if(done % 100 == 0) std::cout << done << std::endl;
+    if(done % 10000 == 0) std::cout << done << std::endl;
     file >> ch;
 
     for(unsigned i = 0; i < 8; ++i){
       bool bit = ch & (1 << (7-i));
-      std::uint32_t pred = rna.predict();
+      std::uint32_t pred = model.predict();
       // std::cout << "prediction : " << pred << " " << std::setprecision(10) << (double) pred / (double) (1ull << 32) << " " << bit << std::endl;
       encoder.encode(bit, pred);
-      rna.update(bit);
+      model.update(bit);
     }
     done++;
   }
@@ -95,8 +98,8 @@ enum class ProgramOption {
 };
 
 int main(int argc, char** argv){
-  FixedPoint20 a(344.4795246);
-  FixedPoint20 e = a.exp();
+  FixedPoint20 a(0.5);
+  FixedPoint20 e = a.subOneLn();
   std::cout << std::setprecision(25) <<  e.asDouble() << std::endl;
 
   std::vector<std::string> args(argc - 1);

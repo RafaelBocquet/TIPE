@@ -1,7 +1,7 @@
 template<unsigned IB, unsigned FB>
-FixedPoint<IB, FB> FixedPoint<IB, FB>::exp() const{
+FixedPoint<IB, FB> FixedPoint<IB, FB>::subOneLn() const{
   // exp(exp_table_1[i]) = 2^(i);
-  // exp(exp_table_1[IB-1]) = 2^(IB);
+  // exp_table_1[i] = ln(2^(i+1))
   static constexpr SelfType exp_table_1 [32] = {
     SelfType(     0                                                         ),
     SelfType(     0.6931471805599452862267639829951804131269454956054687    ),
@@ -36,6 +36,7 @@ FixedPoint<IB, FB> FixedPoint<IB, FB>::exp() const{
     SelfType(     20.7944154167983583647583145648241043090820312            ),
     SelfType(     21.4875625973583055383642204105854034423828125            )
   };
+  // exp_table_2[i] = ln(1 + 2^(-i))
   // exp(exp_table_2[i]) = 2^(-i-1) + 1;
   static constexpr SelfType exp_table_2 [31] = {
     SelfType(     0.4054651081081643848591511414269916713237762451171875                           ),
@@ -70,30 +71,66 @@ FixedPoint<IB, FB> FixedPoint<IB, FB>::exp() const{
     SelfType(     9.313225741817976466307982263970188796520233154296875E-10                        ),
     SelfType(     4.65661287199319040563949556599254719913005828857421875E-10                      )
   };
+  // exp_table_3[i] = 2^(i+1) / (2^(i+1) + 1)
+  static constexpr SelfType exp_table_3 [31] = {
+    SelfType(     0.66666666666666662965923251249478198587894439697265625                          ),
+    SelfType(     0.8000000000000000444089209850062616169452667236328125                           ),
+    SelfType(     0.888888888888888839545643349993042647838592529296875                            ),
+    SelfType(     0.9411764705882352810561997102922759950160980224609375                           ),
+    SelfType(     0.96969696969696972388419453636743128299713134765625                             ),
+    SelfType(     0.984615384615384670041748904623091220855712890625                               ),
+    SelfType(     0.9922480620155038621987841906957328319549560546875                              ),
+    SelfType(     0.996108949416342426275150501169264316558837890625                               ),
+    SelfType(     0.998050682261208521595108322799205780029296875                                  ),
+    SelfType(     0.99902439024390243815787471248768270015716552734375                             ),
+    SelfType(     0.99951195705222062315442599356174468994140625                                   ),
+    SelfType(     0.999755918965096412875936948694288730621337890625                               ),
+    SelfType(     0.9998779445868424264887153185554780066013336181640625                           ),
+    SelfType(     0.999938968568812924786470830440521240234375                                     ),
+    SelfType(     0.999969483353169152906048111617565155029296875                                  ),
+    SelfType(     0.999984741443764590940190828405320644378662109375                               ),
+    SelfType(     0.999992370663675966824257557163946330547332763671875                            ),
+    SelfType(     0.999996185317286290228366851806640625                                           ),
+    SelfType(     0.99999809265500516630709171295166015625                                         ),
+    SelfType(     0.9999990463265930884517729282379150390625                                       ),
+    SelfType(     0.999999523163069170550443232059478759765625                                     ),
+    SelfType(     0.99999976158147774185636080801486968994140625                                   ),
+    SelfType(     0.9999998807907246600734652020037174224853515625                                 ),
+    SelfType(     0.999999940395358777323053800500929355621337890625                               ),
+    SelfType(     0.99999997019767850048310720012523233890533447265625                             ),
+    SelfType(     0.9999999850988390281969486750313080847263336181640625                           ),
+    SelfType(     0.999999992549419403076171875                                                    ),
+    SelfType(     0.9999999962747097015380859375                                                   ),
+    SelfType(     0.99999999813735485076904296875                                                  ),
+    SelfType(     0.999999999068677425384521484375                                                 ),
+    SelfType(     0.9999999995343387126922607421875                                                ),
+  };
+
+  assert(mValue >= 0);
+  assert(mValue <= SelfType::unit);
+
   std::int32_t x = mValue;
-  bool neg = x < 0; if(neg){ x = -x; }
-  if(x >= exp_table_1[IB].mValue){
-    return neg ? SelfType() : SelfType::FromValue(maximum);
-  }
-  SelfType result;
+
+  SelfType result = SelfType();
+
   unsigned lo = 0, hi = IB;
-  while(hi != lo){
-    unsigned mid = (hi + lo + 1) / 2;
-    if(x < exp_table_1[mid].mValue){
-      hi = mid - 1;
-    }else{
-      lo = mid;
+  while(lo != hi){
+    unsigned mid = (lo + hi) / 2;
+    if(x < (1 << mid)){
+      hi = mid;
+    } else {
+      lo = mid + 1;
     }
   }
-  result.mValue = unit << lo;
-  x -= exp_table_1[lo].mValue;
+  result -= exp_table_1[IB-lo].mValue;
+  x >>= (IB-lo);
 
   for(unsigned i = 0; i < 31; ++i){
-    while(x >= exp_table_2[i].mValue && exp_table_2[i].mValue != 0){
-      x -= exp_table_2[i].mValue;
-      result.mValue += result.mValue >> (i + 1);
+    if(x < exp_table_3[i].mValue){
+      result -= exp_table_2[i];
+      x += (x >> (i+1));
     }
   }
-  
-  return neg ? (SelfType(1.0) / result) : result;
+
+  return result;
 }
