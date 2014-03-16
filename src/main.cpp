@@ -1,8 +1,9 @@
-#include "Rna.h"
 #include "Encoder.h"
+#include "Decoder.h"
 #include "Matrix.h"
 #include "FixedPoint.h"
 #include "Model.h"
+#include "BitRNAModel.h"
 #include "RNAModel.h"
 #include "BytePPMModel.h"
 #include "BitPPMModel.h"
@@ -36,20 +37,13 @@ void archive(std::string const& filename){
   Encoder encoder(out_file);
 
   // --- Algo ---
-  unsigned char ch;
+  char ch;
 
-  ConstModel mid;
-  BitPPMModel<64> ppm(12800);
-  BytePPMModel<3> ppm2(40000);
-  BitRNAModel<16> rna;
-  MixModel model({
-    &mid,
-    &rna
-  });
+  RNAModel<RNAContext> model;
   unsigned done = 0;
   while(file.good()){
     if(done % 10000 == 0) std::cout << done << std::endl;
-    file >> ch;
+    file.get(ch);
 
     for(unsigned i = 0; i < 8; ++i){
       bool bit = ch & (1 << (7-i));
@@ -75,12 +69,25 @@ void extract(std::string const& filename){
 
   std::uint32_t file_length;
   file.read((char*) &file_length, sizeof(std::uint32_t));
+  Decoder decoder(file);
 
   // --- Open out file ---
   std::ofstream out_file(filename + ".orig");
 
-  for(unsigned a = 0; a < file_length; ++a){
+  // --- Algo ---
+  BitRNAModel<16> rna;
 
+  for(unsigned a = 0; a < file_length; ++a){
+    char ch = 0;
+    for(unsigned i = 0; i < 8; ++i){
+      std::uint32_t pred = rna.predict();
+      bool bit = decoder.decode(pred);
+      if(bit){
+        ch |= 1 << (7-i);
+      }
+      rna.update(bit);
+    }
+    out_file.put(ch);
   }
 }
 
@@ -98,10 +105,6 @@ enum class ProgramOption {
 };
 
 int main(int argc, char** argv){
-  FixedPoint20 a(0.5);
-  FixedPoint20 e = a.subOneLn();
-  std::cout << std::setprecision(25) <<  e.asDouble() << std::endl;
-
   std::vector<std::string> args(argc - 1);
   for(unsigned i = 0; i < argc - 1; ++i){
     args[i] = std::string(argv[i + 1]);

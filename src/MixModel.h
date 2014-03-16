@@ -5,7 +5,7 @@
 
 class MixModel : public Model{
 public:
-  MixModel(std::vector<Model*> models, std::vector<FixedPoint24> weigths = {}, FixedPoint24 rate = FixedPoint24(0.002)) : 
+  MixModel(std::vector<Model*> models, std::vector<FixedPoint24> weigths = {}, FixedPoint24 rate = FixedPoint24(0.006)) : 
   mModels(std::move(models)),
   mModelPredictions(mModels.size()),
   mRate(rate){
