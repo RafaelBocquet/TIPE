@@ -5,7 +5,7 @@
 
 class RNAContext {
 public:
-  static constexpr unsigned ContextSize = 3211519;
+  static constexpr unsigned ContextSize = 67174647;
 
   RNAContext() : mCharPos(0), mCurrentChar(0), mBuffer(4) { }
 
@@ -14,7 +14,8 @@ public:
       1, 2, 4, 8, 16, 32, 64, 128
     };
     // 0 -> 0 Always on
-    f(0);
+    // Note : does not improve compression
+    // f(0);
     // 1 -> 255 Current char
     unsigned currentCharContext = pow2[mCharPos] + mCurrentChar;
     assert(1 <= currentCharContext && currentCharContext <= 255);
@@ -27,8 +28,8 @@ public:
     unsigned long last2CharContext = 256 * 256 * mBuffer[mBuffer.size() - 2] +
       256 * mBuffer[mBuffer.size() - 1] +
       pow2[mCharPos] + mCurrentChar - 1;
-    // 65791 -> 1114366
-    unsigned last2CharContextHash = 65791 + last2CharContext % 1048576;
+    // 65791 -> 16843005
+    unsigned last2CharContextHash = 65791 + last2CharContext % 16777214;
     f(last2CharContextHash);
     // 0 -> 4294967296
     unsigned long last3CharContext =
@@ -36,8 +37,8 @@ public:
       256 * 256 * mBuffer[mBuffer.size() - 2] +
       256 * mBuffer[mBuffer.size() - 1] +
       pow2[mCharPos] + mCurrentChar - 1;
-    // 1114367 -> 2162942
-    unsigned last3CharContextHash = 1114367 + last3CharContext % 1048576;
+    // 16843006 -> 33620219
+    unsigned last3CharContextHash = 16843006 + last3CharContext % 16777214;
     f(last3CharContextHash);
     // 0 -> 1099511627776
     unsigned long last4CharContext =
@@ -46,9 +47,19 @@ public:
       256 * 256 * mBuffer[mBuffer.size() - 2] +
       256 * mBuffer[mBuffer.size() - 1] +
       pow2[mCharPos] + mCurrentChar - 1;
-    // 2162943 -> 3211518
-    unsigned last4CharContextHash = 1114367 + last3CharContext % 1048576;
-    f(last3CharContextHash);
+    // 33620219 -> 50397433
+    unsigned last4CharContextHash = 33620219 + last4CharContext % 16777214;
+    f(last4CharContextHash);
+    unsigned long last5CharContext =
+      256 * 256 * 256 * 256 * 256 * mBuffer[mBuffer.size() - 5] +
+      256 * 256 * 256 * 256 * mBuffer[mBuffer.size() - 4] +
+      256 * 256 * 256 * mBuffer[mBuffer.size() - 3] +
+      256 * 256 * mBuffer[mBuffer.size() - 2] +
+      256 * mBuffer[mBuffer.size() - 1] +
+      pow2[mCharPos] + mCurrentChar - 1;
+    // 50397433 -> 67174647
+    unsigned last5CharContextHash = 50397433 + last5CharContext % 16777214;
+    f(last5CharContextHash);
   }
 
   void update(bool bit){
@@ -73,13 +84,11 @@ template<typename Ctx>
 class RNAModel : public Model {
 public:
   RNAModel() :
-  random_generator(195486732),
   mContext()
   {
-    std::uniform_real_distribution<double> distribution(-0.6, 0.6);
     mMatrix.resize(Ctx::ContextSize, 1);
     mMatrix.init([&](unsigned, unsigned) -> FixedPoint20 {
-      return FixedPoint20(distribution(random_generator));
+      return FixedPoint20(0);
     });
   }
 
@@ -103,7 +112,7 @@ public:
   }
 
   void train(bool b) {
-    FixedPoint20 training_rate = FixedPoint20(0.3);
+    FixedPoint20 training_rate = FixedPoint20(0.375);
     // --- Create except vector ---
     FixedPoint20 delta = (mResult - (b ? FixedPoint20(1.0) : FixedPoint20(0.0))) * mDerivative;
 

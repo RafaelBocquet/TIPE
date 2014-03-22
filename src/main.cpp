@@ -91,6 +91,56 @@ void extract(std::string const& filename){
   }
 }
 
+void html_bpc(std::string const& filename){
+  std::cout << "html bpc for : " << filename << std::endl;
+  std::ifstream file(filename);
+  if(!file.good()){
+    std::cout << "Can't open file " << filename << std::endl;
+    return;
+  }
+  
+  // --- Get file size ---
+  file.seekg(0, std::ios::end);
+  std::uint32_t file_length = file.tellg();
+  file.seekg(0, std::ios::beg);
+
+  std::cout << "Size : " << file_length << std::endl;
+
+  // --- Open out file ---
+
+  std::ofstream out_file(filename + ".html");
+
+  // --- Algo ---
+  char ch;
+
+  RNAModel<RNAContext> model;
+  unsigned done = 0;
+  while(file.good() && !file.eof()){
+    if(done % 10000 == 0) std::cout << done << std::endl;
+    file.get(ch);
+
+    double bitcount = 0.0;
+
+    for(unsigned i = 0; i < 8; ++i){
+      bool bit = ch & (1 << (7-i));
+      std::uint32_t pred = model.predict();
+      double pred_double = static_cast<double>(pred) / static_cast<double>((std::uint64_t) 1 << 32);
+      double err = bit ? 1.0 - pred_double : pred_double;
+      bitcount -= std::log(1.0 - err) / std::log(2.0);
+
+      model.update(bit);
+    }
+    int r = 255.0 * bitcount / 8.0;
+    int g = 255.0 * (1.0 - bitcount / 8.0);
+    int b = 0;
+    out_file << "<span style=\"background-color:rgb(" << r << ", " << g << ", " << b << ");\">" << ch << "</span>";
+    if(ch == '\n'){
+      out_file << "<br/>";
+    }
+    done++;
+  }
+}
+
 // --- Argument parsing ---
 
 void help(){
@@ -101,7 +151,8 @@ void help(){
 enum class ProgramOption {
   Help,
   Archive,
-  Extract
+  Extract,
+  HTMLBPC
 };
 
 int main(int argc, char** argv){
@@ -113,6 +164,8 @@ int main(int argc, char** argv){
   if(!args.empty()){
     if(args[0] == "a"){
       option = ProgramOption::Archive;
+    }if(args[0] == "b"){
+      option = ProgramOption::HTMLBPC;
     }else if(args[0] == "x"){
       option = ProgramOption::Extract;
     }
@@ -124,6 +177,11 @@ int main(int argc, char** argv){
   case ProgramOption::Archive:
     for(unsigned i = 1; i < args.size(); ++i){
       archive(args[i]);
+    }
+    break;
+  case ProgramOption::HTMLBPC:
+    for(unsigned i = 1; i < args.size(); ++i){
+      html_bpc(args[i]);
     }
     break;
   case ProgramOption::Extract:
